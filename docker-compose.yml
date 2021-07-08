@@ -9,6 +9,7 @@ services:
       ALLOW_SITE_CRAWLERS: "true"
       APP_ORIGIN: "http://localhost:8080"
       APP_SECRET: "secret"
+      APP_CACHE: '${APP_CACHE:-in-memory}'
       AUTHENTICATION_STRATEGY: '${AUTHENTICATION_STRATEGY:-twitter}'
       CROSSREF_API_BEARER_TOKEN:
       DISABLE_COOKIEBOT: '${DISABLE_COOKIEBOT}'
@@ -22,6 +23,7 @@ services:
       PGPASSWORD: secret
       PGDATABASE: sciety
       PRELIGHTS_FEED_KEY:
+      REDIS_HOST: sciety_cache
       TWITTER_API_KEY: '${TWITTER_API_KEY:-twitter-api-key}'
       TWITTER_API_SECRET_KEY: '${TWITTER_API_SECRET_KEY:-twitter-api-secret-key}'
       TWITTER_API_BEARER_TOKEN: '${TWITTER_API_BEARER_TOKEN:-twitter-api-bearer-token}'
@@ -38,3 +40,6 @@ services:
     healthcheck:
       test: pg_isready --username $$POSTGRES_USER --dbnam $$POSTGRES_DB || exit 1
       interval: 5s
+  cache:
+    container_name: sciety_cache
+    image: redis:6.2-alpine

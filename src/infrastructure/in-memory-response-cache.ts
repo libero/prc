@@ -5,7 +5,7 @@ type ResponseCache = Record<string, Promise<string>>;
 
 type DownstreamFetcher = (doi: Doi, acceptHeader: string) => Promise<string>;
 
-export const responseCache = (
+export const inMemoryResponseCache = (
   downstreamFetcher: DownstreamFetcher,
   logger: Logger,
 ): DownstreamFetcher => {

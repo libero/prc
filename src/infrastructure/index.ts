@@ -6,6 +6,7 @@ import * as RNEA from 'fp-ts/ReadonlyNonEmptyArray';
 import * as T from 'fp-ts/Task';
 import * as TE from 'fp-ts/TaskEither';
 import { identity, pipe } from 'fp-ts/function';
+import Redis from 'ioredis';
 import { Pool } from 'pg';
 import { Adapters } from './adapters';
 import { biorxivCache } from './biorxiv-cache';
@@ -33,10 +34,11 @@ import { getTwitterUserDetails } from './get-twitter-user-details';
 import { getTwitterUserId } from './get-twitter-user-id';
 import { getXmlFromCrossrefRestApi } from './get-xml-from-crossref-rest-api';
 import { inMemoryGroupRepository } from './in-memory-groups';
+import { inMemoryResponseCache } from './in-memory-response-cache';
 import {
   jsonSerializer, loggerIO, rTracerLogger, streamLogger,
 } from './logger';
-import { responseCache } from './response-cache';
+import { redisCache } from './redis-cache';
 import { searchEuropePmc } from './search-europe-pmc';
 import { bootstrapGroups } from '../data/bootstrap-groups';
 import * as DomainEvent from '../types/domain-events';
@@ -102,11 +104,25 @@ export const createInfrastructure = (dependencies: Dependencies): TE.TaskEither<
         rapidreviews: fetchRapidReview(logger, getHtml(logger)),
       };
 
-      return {
-        fetchArticle: fetchCrossrefArticle(responseCache(getXmlFromCrossrefRestApi(
+      const crossrefCache = (process.env.APP_CACHE ?? 'in-memory') === 'redis'
+        ? redisCache(
+          new Redis({ host: process.env.REDIS_HOST ?? 'localhost' }),
+          getXmlFromCrossrefRestApi(
+            logger,
+            dependencies.crossrefApiBearerToken,
+          ),
           logger,
-          dependencies.crossrefApiBearerToken,
-        ), logger), logger),
+        )
+        : inMemoryResponseCache(
+          getXmlFromCrossrefRestApi(
+            logger,
+            dependencies.crossrefApiBearerToken,
+          ),
+          logger,
+        );
+
+      return {
+        fetchArticle: fetchCrossrefArticle(crossrefCache, logger),
         fetchReview: fetchReview(fetchers),
         fetchStaticFile: fetchFile,
         findGroups: findGroups(fetchFile, bootstrapGroups),
